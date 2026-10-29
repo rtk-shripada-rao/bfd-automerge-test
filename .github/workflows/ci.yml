@@ -33,7 +33,7 @@ jobs:
 
       - name: Run tests
         env:
-          SIMULATED_TEST_SECONDS: 100
+          SIMULATED_TEST_SECONDS: 50
         run: |
           echo "Running tests (simulated, ${SIMULATED_TEST_SECONDS}s)..."
           sleep "$SIMULATED_TEST_SECONDS"
