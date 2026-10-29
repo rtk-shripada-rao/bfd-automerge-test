@@ -4,21 +4,17 @@ Test bed for a GitHub Actions workflow that approves and merges automation-gener
 
 ## How it works
 
-`.github/workflows/auto-merge-beta-prs.yml` runs on two triggers:
-- `pull_request_target` (opened, labeled, ready_for_review): runs from the base branch to validate the PR early
-- `check_suite` (completed): runs after CI completes to approve and merge
+`.github/workflows/auto-merge-beta-prs.yml` runs on `pull_request_target` (opened, labeled, ready for review), so the workflow always comes from the base branch and a PR can't change the rules it's judged by.
 
-The workflow always runs from the base branch, so a PR can't change the rules it's judged by.
-
-**On PR open** (`pull_request_target`):
-1. **Gate**: skip if the PR is a draft or wasn't opened by `bfd-automerge-test-bot[bot]` (the GitHub App). Production uses `26-srsd-sigma-automation-pipeline[bot]`.
+1. **Gate**: the job is skipped if the PR is a draft or wasn't opened by `bfd-automerge-test-bot[bot]` (the GitHub App). Production uses `26-srsd-sigma-automation-pipeline[bot]`.
 2. **Path allowlist**: fail if the PR touches any file outside the allowed patterns below.
+3. **Wait for checks**: wait until the ruleset's required checks register, then `gh pr checks --required --watch --fail-fast`. A failing check stops the run before approval.
+4. **Approve**: the service account approves the PR.
+5. **Merge**: `gh pr merge --squash --match-head-commit`. Repo auto-merge is off, so the workflow merges directly.
 
-**After checks complete** (`check_suite`):
-3. **Approve**: the service account approves the PR (checks already passed by definition).
-4. **Merge**: `gh pr merge --squash --match-head-commit`. Repo auto-merge is off.
+`check_suite` can't be used to run after CI instead: GitHub doesn't trigger workflows from check suites created by GitHub Actions.
 
-Steps 3–4 use the `AUTOMERGE_PAT` secret (the service account's PAT). The PR author can't approve its own PR, which is why the app opens it and the service account approves it. A PAT is used instead of `GITHUB_TOKEN` because merges made with `GITHUB_TOKEN` don't trigger `push` workflows on the base branch.
+Steps 3–5 use the `AUTOMERGE_PAT` secret (the service account's PAT). The PR author can't approve its own PR, which is why the app opens it and the service account approves it. A PAT is used instead of `GITHUB_TOKEN` because merges made with `GITHUB_TOKEN` don't trigger `push` workflows on the base branch.
 
 ## Allowed file patterns
 
