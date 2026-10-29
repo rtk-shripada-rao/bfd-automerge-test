@@ -77,17 +77,13 @@ jobs:
             core.info(`All ${files.length} files match allowed patterns`);
             return true;
 
-      - name: Wait for required checks
-        if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
-        run: |
-          gh pr checks "$PR" --repo "$REPO" --required --watch --fail-fast --interval 30
-        env:
-          GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
-          PR: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-
+      # Only approve/merge after checks complete. On pull_request_target events, we stop after file validation.
+      # The check_suite:completed trigger will re-run this workflow once CI finishes.
       - name: Approve PR
-        if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
+        if: |
+          github.event_name == 'check_suite' &&
+          steps.should-run.outputs.skip == 'false' &&
+          steps.check-files.outputs.result == 'true'
         run: |
           gh pr review --approve "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}"
@@ -96,15 +92,21 @@ jobs:
 
       # Test repo only: leaves time to see the approval in the PR UI before merging.
       - name: Pause after approval
-        if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
+        if: |
+          github.event_name == 'check_suite' &&
+          steps.should-run.outputs.skip == 'false' &&
+          steps.check-files.outputs.result == 'true'
         env:
           PAUSE_SECONDS: 60
         run: sleep "$PAUSE_SECONDS"
 
-      # Checks already passed in the wait step, so merge immediately.
+      # Checks already completed (check_suite trigger means they passed), so merge immediately.
       # --match-head-commit refuses the merge if commits were pushed after this run started.
       - name: Merge PR
-        if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
+        if: |
+          github.event_name == 'check_suite' &&
+          steps.should-run.outputs.skip == 'false' &&
+          steps.check-files.outputs.result == 'true'
         run: |
           gh pr merge "$PR" --repo "$REPO" --squash --match-head-commit "$HEAD_SHA"
         env:
