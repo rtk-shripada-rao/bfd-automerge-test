@@ -30,7 +30,7 @@ jobs:
             exit 0
           fi
 
-          if [[ "${{ github.event.pull_request.user.login }}" != "srsd-sigma-automation-pipeline[bot]" ]]; then
+          if [[ "${{ github.event.pull_request.user.login }}" != "bfd-automerge-test-bot[bot]" ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "reason=Not created by bot" >> $GITHUB_OUTPUT
             exit 0

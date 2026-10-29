@@ -6,7 +6,7 @@ Test bed for a GitHub Actions workflow that approves and merges automation-gener
 
 `.github/workflows/auto-merge-beta-prs.yml` runs on `pull_request_target` (opened, labeled, ready for review), so the workflow always comes from the base branch and a PR can't change the rules it's judged by.
 
-1. **Gate**: skip if the PR is a draft or wasn't opened by `srsd-sigma-automation-pipeline[bot]` (the GitHub App).
+1. **Gate**: skip if the PR is a draft or wasn't opened by `bfd-automerge-test-bot[bot]` (the GitHub App). Production uses `26-srsd-sigma-automation-pipeline[bot]`.
 2. **Path allowlist**: fail if the PR touches any file outside the allowed patterns below.
 3. **Approve**: the service account approves the PR.
 4. **Merge**: wait for the ruleset's required checks (`gh pr checks --required --watch`), then `gh pr merge --squash --match-head-commit`. Repo auto-merge is off, so the workflow does the waiting.

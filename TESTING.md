@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- The `srsd-sigma-automation-pipeline` GitHub App is installed on this repo; test PRs must be opened by it.
+- The `bfd-automerge-test-bot` GitHub App is installed on this repo; test PRs must be opened by it. Production uses `26-srsd-sigma-automation-pipeline`.
 - Repo secret `AUTOMERGE_PAT`: a PAT for a service account (not the app) with **Contents** and **Pull requests** read/write on this repo.
 
 ## Scenarios
@@ -31,7 +31,7 @@ git commit -am "Add beta rule status" && git push -u origin HEAD
 
 ## Troubleshooting
 
-- **Every run skips**: check the PR author is exactly `srsd-sigma-automation-pipeline[bot]`.
+- **Every run skips**: check the PR author is exactly `bfd-automerge-test-bot[bot]`.
 - **Workflow changes have no effect**: `pull_request_target` reads the workflow from the base branch, so changes only apply once they're on `main`.
 - **Approve or merge fails**: check `AUTOMERGE_PAT` exists, isn't expired, and its account isn't the PR author.
 - **Merge step fails after checks pass**: the PR merge box lists what's still blocking (usually the approval); a "head commit" error means commits were pushed after the run started.
