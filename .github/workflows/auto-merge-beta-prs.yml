@@ -57,12 +57,12 @@ jobs:
             });
 
             const allowedPatterns = [
-              /^intentions\/config_engine\/escalation_status\.json$/,
-              /^intentions\/config_shared\/s10_constants_sigma_autopipeline_.*\.yaml$/,
-              /^intentions\/tests\/baseline\/outcome_validation\/create_escalation\/s40_escalate_sigma_autopipeline_.*\.json$/,
-              /^intentions\/v2\/sigma\/s40_escalate_sigma_autopipeline_.*\.py$/,
-              /^intentions\/s40_escalate_sigma_autopipeline_.*\.py$/,
-              /^rtksigmadetectiongenerator\/rules\/auto_pipeline\/.*\.yml$/
+              /^detections\/engine\/rule_status\.json$/,
+              /^detections\/shared\/constants_autopipeline_.*\.yaml$/,
+              /^detections\/tests\/rule_autopipeline_.*\.json$/,
+              /^detections\/v2\/rule_autopipeline_.*\.py$/,
+              /^detections\/rule_autopipeline_.*\.py$/,
+              /^generator\/rules\/auto_pipeline\/.*\.yml$/
             ];
 
             const invalidFiles = files.filter(file => {

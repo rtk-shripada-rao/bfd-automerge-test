@@ -1,54 +1,38 @@
-# BFD Auto-merge Test Repository
+# Auto-merge Test Repository
 
-This repository demonstrates the auto-merge GitHub Actions workflow for beta PRs.
+Test bed for a GitHub Actions workflow that approves and merges automation-generated detection PRs.
 
-## Structure
+## How it works
 
-The repository contains example files that match the allowed patterns in the auto-merge workflow:
+`.github/workflows/auto-merge-beta-prs.yml` runs on `pull_request_target` (opened, labeled, ready for review), so the workflow always comes from the base branch and a PR can't change the rules it's judged by.
 
-### Allowed File Patterns
+1. **Gate**: skip if the PR is a draft or wasn't opened by `srsd-sigma-automation-pipeline[bot]` (the GitHub App).
+2. **Path allowlist**: fail if the PR touches any file outside the allowed patterns below.
+3. **Wait for CI**: poll until the `ci` check passes (test repo only; see below).
+4. **Approve**: the service account approves the PR.
+5. **Merge**: the service account squash-merges the PR.
 
-1. **intentions/config_engine/escalation_status.json** - Configuration for escalation statuses
-2. **intentions/config_shared/s10_constants_*.yaml** - Shared constants configurations
-3. **intentions/tests/baseline/outcome_validation/create_escalation/*.json** - Test files for escalation validation
-4. **intentions/v2/sigma/s40_*.py** - Sigma-based escalation rules (v2)
-5. **intentions/s40_*.py** - Root-level escalation rules
-6. **rtksigmadetectiongenerator/rules/auto_pipeline/*.yml** - Auto-pipeline sigma rules
+Steps 4–5 use the `AUTOMERGE_PAT` secret (the service account's PAT). The PR author can't approve its own PR, which is why the app opens it and the service account approves it. A PAT is used instead of `GITHUB_TOKEN` because merges made with `GITHUB_TOKEN` don't trigger `push` workflows on the base branch.
 
-## Auto-merge Workflow
+## Allowed file patterns
 
-The `.github/workflows/auto-merge-beta-prs.yml` workflow will automatically merge PRs that meet these criteria:
-
-1. **Not a draft PR**
-2. **Has the `beta-rule` label**
-3. **Created by the configured user** (`rtk-shripada-rao` in this test repo)
-4. **Only modifies files matching the allowed patterns above**
-5. **All CI checks pass**
-
-### Setup
-
-The allowed PR author is set in the workflow:
-
-```yaml
-if [[ "${{ github.event.pull_request.user.login }}" != "rtk-shripada-rao" ]]; then
+```
+detections/engine/rule_status.json
+detections/shared/constants_autopipeline_*.yaml
+detections/tests/rule_autopipeline_*/**/*.json
+detections/v2/rule_autopipeline_*.py
+detections/rule_autopipeline_*.py
+generator/rules/auto_pipeline/**/*.yml
 ```
 
-In production, PRs are opened with a service account's PAT, so replace this with the service account's username.
+## Test repo vs production
 
-### How It Works
+| | Test repo | Production |
+|---|---|---|
+| Branch protection | None | Required checks + 1 approval |
+| Wait for CI step | Waits on `ci` | Remove; `--auto` waits for all required checks |
+| Merge | `gh pr merge --squash` | `gh pr merge --auto --squash` |
 
-1. When a PR is opened, labeled, or marked ready for review, the workflow runs
-2. It checks if the PR meets all requirements (not draft, has label, correct author)
-3. It validates that all changed files match the allowed patterns
-4. It waits for CI checks to complete
-5. If everything passes, it squash-merges the PR directly (no branch protection in this test repo; production uses `gh pr merge --auto`)
+Production also needs **Settings → General → Allow auto-merge** and **Dismiss stale approvals when new commits are pushed** in the branch rules.
 
-## Testing
-
-To test the workflow:
-
-1. Create a branch with changes to allowed files only
-2. Open a PR from that branch
-3. Add the `beta-rule` label
-4. Ensure your CI check is named `ci` (or update the workflow)
-5. The workflow will automatically merge once CI passes
+See [TESTING.md](TESTING.md) for test scenarios.

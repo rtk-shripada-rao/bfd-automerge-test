@@ -1,0 +1,16 @@
+title: Example Detection Rule
+id: 00000000-0000-4000-8000-000000000001
+status: experimental
+description: Example rule for auto-merge testing
+date: "2026-10-29"
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    condition: selection
+    selection:
+        CommandLine|contains:
+            - 'example.exe'
+level: medium
+tags:
+    - attack.execution

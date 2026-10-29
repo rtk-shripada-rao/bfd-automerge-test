@@ -29,7 +29,7 @@ jobs:
         run: |
           echo "Running linters..."
           # Add your linting commands here
-          # Example: pylint intentions/ rtksigmadetectiongenerator/
+          # Example: pylint detections/ generator/
 
       - name: Run tests
         env:
@@ -42,5 +42,5 @@ jobs:
         run: |
           echo "Validating file structure..."
           # Add validation commands here
-          python -c "import json; json.load(open('intentions/config_engine/escalation_status.json'))"
+          python -c "import json; json.load(open('detections/engine/rule_status.json'))"
           echo "✅ All validations passed"
