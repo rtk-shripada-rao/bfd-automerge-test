@@ -77,6 +77,15 @@ jobs:
             core.info(`All ${files.length} files match allowed patterns`);
             return true;
 
+      - name: Wait for required checks
+        if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
+        run: |
+          gh pr checks "$PR" --repo "$REPO" --required --watch --fail-fast --interval 30
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+
       - name: Approve PR
         if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
         run: |
@@ -92,12 +101,11 @@ jobs:
           PAUSE_SECONDS: 60
         run: sleep "$PAUSE_SECONDS"
 
-      # Repo auto-merge is off, so wait for the ruleset's required checks, then merge.
+      # Checks already passed in the wait step, so merge immediately.
       # --match-head-commit refuses the merge if commits were pushed after this run started.
       - name: Merge PR
         if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
         run: |
-          gh pr checks "$PR" --repo "$REPO" --required --watch --fail-fast --interval 30
           gh pr merge "$PR" --repo "$REPO" --squash --match-head-commit "$HEAD_SHA"
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
