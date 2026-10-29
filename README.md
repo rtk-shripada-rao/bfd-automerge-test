@@ -8,10 +8,11 @@ Test bed for a GitHub Actions workflow that approves and merges automation-gener
 
 1. **Gate**: skip if the PR is a draft or wasn't opened by `bfd-automerge-test-bot[bot]` (the GitHub App). Production uses `26-srsd-sigma-automation-pipeline[bot]`.
 2. **Path allowlist**: fail if the PR touches any file outside the allowed patterns below.
-3. **Approve**: the service account approves the PR.
-4. **Merge**: wait for the ruleset's required checks (`gh pr checks --required --watch`), then `gh pr merge --squash --match-head-commit`. Repo auto-merge is off, so the workflow does the waiting.
+3. **Wait for checks**: wait for the ruleset's required checks to pass (`gh pr checks --required --watch`).
+4. **Approve**: the service account approves the PR after checks pass.
+5. **Merge**: `gh pr merge --squash --match-head-commit` (checks already passed). Repo auto-merge is off.
 
-Steps 3–4 use the `AUTOMERGE_PAT` secret (the service account's PAT). The PR author can't approve its own PR, which is why the app opens it and the service account approves it. A PAT is used instead of `GITHUB_TOKEN` because merges made with `GITHUB_TOKEN` don't trigger `push` workflows on the base branch.
+Steps 3–5 use the `AUTOMERGE_PAT` secret (the service account's PAT). The PR author can't approve its own PR, which is why the app opens it and the service account approves it. A PAT is used instead of `GITHUB_TOKEN` because merges made with `GITHUB_TOKEN` don't trigger `push` workflows on the base branch.
 
 ## Allowed file patterns
 
