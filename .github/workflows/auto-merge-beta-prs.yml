@@ -14,6 +14,10 @@ concurrency:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
+    # Skip the workflow entirely for drafts and wrong author - shows as "Skipped" in checks UI
+    if: |
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.user.login == 'bfd-automerge-test-bot[bot]'
 
     # GITHUB_TOKEN is read-only here; approve and merge use AUTOMERGE_PAT.
     permissions:
@@ -21,30 +25,7 @@ jobs:
       pull-requests: read
 
     steps:
-      - name: Check if auto-merge should run
-        id: should-run
-        run: |
-          if [[ "${{ github.event.pull_request.draft }}" == "true" ]]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "reason=PR is draft" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          if [[ "${{ github.event.pull_request.user.login }}" != "bfd-automerge-test-bot[bot]" ]]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "reason=Not created by bot" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "skip=false" >> $GITHUB_OUTPUT
-
-      - name: Skip message
-        if: steps.should-run.outputs.skip == 'true'
-        run: |
-          echo "Skipping auto-merge: ${{ steps.should-run.outputs.reason }}"
-
       - name: Check files changed
-        if: steps.should-run.outputs.skip == 'false'
         id: check-files
         uses: actions/github-script@v7
         with:
@@ -82,7 +63,6 @@ jobs:
       - name: Approve PR
         if: |
           github.event_name == 'check_suite' &&
-          steps.should-run.outputs.skip == 'false' &&
           steps.check-files.outputs.result == 'true'
         run: |
           gh pr review --approve "${{ github.event.pull_request.number }}" \
@@ -94,7 +74,6 @@ jobs:
       - name: Pause after approval
         if: |
           github.event_name == 'check_suite' &&
-          steps.should-run.outputs.skip == 'false' &&
           steps.check-files.outputs.result == 'true'
         env:
           PAUSE_SECONDS: 60
@@ -105,7 +84,6 @@ jobs:
       - name: Merge PR
         if: |
           github.event_name == 'check_suite' &&
-          steps.should-run.outputs.skip == 'false' &&
           steps.check-files.outputs.result == 'true'
         run: |
           gh pr merge "$PR" --repo "$REPO" --squash --match-head-commit "$HEAD_SHA"
