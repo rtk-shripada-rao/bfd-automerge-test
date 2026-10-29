@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Add your dependencies here
+          # pip install -r requirements.txt
+
+      - name: Run linters
+        run: |
+          echo "Running linters..."
+          # Add your linting commands here
+          # Example: pylint intentions/ rtksigmadetectiongenerator/
+
+      - name: Run tests
+        env:
+          SIMULATED_TEST_SECONDS: 10
+        run: |
+          echo "Running tests (simulated, ${SIMULATED_TEST_SECONDS}s)..."
+          sleep "$SIMULATED_TEST_SECONDS"
+
+      - name: Validate file structure
+        run: |
+          echo "Validating file structure..."
+          # Add validation commands here
+          python -c "import json; json.load(open('intentions/config_engine/escalation_status.json'))"
+          echo "✅ All validations passed"

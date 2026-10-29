@@ -1,0 +1,12 @@
+# Example s10_constants file
+# This matches the pattern: s10_constants_.*\.yaml
+
+EXPECTED_PROCESSES:
+  - process: "example.exe"
+    description: "Example process"
+  - process: "test.exe"
+    description: "Test process"
+
+CONFIGURATION:
+  version: "1.0"
+  enabled: true
