@@ -15,11 +15,10 @@ jobs:
   auto-merge:
     runs-on: ubuntu-latest
 
-    # GITHUB_TOKEN is read-only here; the merge itself uses AUTOMERGE_PAT.
+    # GITHUB_TOKEN is read-only here; approve and merge use AUTOMERGE_PAT.
     permissions:
       contents: read
       pull-requests: read
-      checks: read
 
     steps:
       - name: Check if auto-merge should run
@@ -78,16 +77,6 @@ jobs:
             core.info(`All ${files.length} files match allowed patterns`);
             return true;
 
-      # Remove in production; with branch protection, --auto waits for all required checks.
-      - name: Wait for CI to pass
-        if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
-        uses: lewagon/wait-on-check-action@v1.3.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          check-name: 'ci'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 30
-
       - name: Approve PR
         if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
         run: |
@@ -96,11 +85,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
 
-      # No branch protection in this test repo, so merge directly; use --auto in production.
-      - name: Merge PR
+      # GitHub merges once the branch ruleset's required checks and approval are satisfied.
+      - name: Enable auto-merge
         if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
         run: |
-          gh pr merge --squash "${{ github.event.pull_request.number }}" \
+          gh pr merge --auto --squash "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
