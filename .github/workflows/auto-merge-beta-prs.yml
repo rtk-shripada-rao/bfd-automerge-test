@@ -85,6 +85,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
 
+      # Test repo only: leaves time to see the approval in the PR UI before auto-merge is enabled.
+      - name: Pause after approval
+        if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
+        env:
+          PAUSE_SECONDS: 60
+        run: sleep "$PAUSE_SECONDS"
+
       # GitHub merges once the branch ruleset's required checks and approval are satisfied.
       - name: Enable auto-merge
         if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
