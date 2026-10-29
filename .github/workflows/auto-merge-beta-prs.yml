@@ -85,18 +85,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
 
-      # Test repo only: leaves time to see the approval in the PR UI before auto-merge is enabled.
+      # Test repo only: leaves time to see the approval in the PR UI before merging.
       - name: Pause after approval
         if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
         env:
           PAUSE_SECONDS: 60
         run: sleep "$PAUSE_SECONDS"
 
-      # GitHub merges once the branch ruleset's required checks and approval are satisfied.
-      - name: Enable auto-merge
+      # Repo auto-merge is off, so wait for the ruleset's required checks, then merge.
+      # --match-head-commit refuses the merge if commits were pushed after this run started.
+      - name: Merge PR
         if: steps.should-run.outputs.skip == 'false' && steps.check-files.outputs.result == 'true'
         run: |
-          gh pr merge --auto --squash "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}"
+          gh pr checks "$PR" --repo "$REPO" --required --watch --fail-fast --interval 30
+          gh pr merge "$PR" --repo "$REPO" --squash --match-head-commit "$HEAD_SHA"
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
