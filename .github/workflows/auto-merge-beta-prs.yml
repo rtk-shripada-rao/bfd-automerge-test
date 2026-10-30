@@ -86,13 +86,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
 
-      # Test repo only: leaves time to see the approval in the PR UI before merging.
-      - name: Pause after approval
-        if: steps.check-files.outputs.result == 'true'
-        env:
-          PAUSE_SECONDS: 60
-        run: sleep "$PAUSE_SECONDS"
-
       # Required checks passed in the wait step, so merge now (repo auto-merge is off).
       # --match-head-commit refuses the merge if commits were pushed after this run started.
       - name: Merge PR
