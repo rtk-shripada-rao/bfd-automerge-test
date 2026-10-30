@@ -14,6 +14,7 @@
 | 3 | Opened by the app as a draft | Skips with "PR is draft"; marking it ready for review runs it again and merges |
 | 4 | Opened by the app, breaks `rule_status.json` (invalid JSON) | Approved, but `ci` fails so the merge step stops; no merge |
 | 5 | Opened by any other account | Skips with "Not created by bot" |
+| 6 | Opened by the app, sets a rule to `"ga"` in `rule_status.json` | "Check files changed" fails with "GA auto-merging is disabled"; no approval or merge |
 
 Example change for scenario 1:
 
