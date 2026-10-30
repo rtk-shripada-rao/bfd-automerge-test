@@ -1,22 +1,24 @@
 name: Auto-merge Detection PRs
 
 on:
-  # Runs the workflow from the base branch, so a PR can't edit the rules it's judged by. Never check out PR code here.
-  pull_request_target:
-    types: [opened, ready_for_review, synchronize]
+  # Runs from the default branch after CI finishes, so a PR can't edit these rules. Never check out PR code here.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
 concurrency:
-  group: auto-merge-${{ github.event.pull_request.number || github.run_id }}
+  group: auto-merge-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    # Skip the workflow entirely for drafts, wrong author, and pushes by anyone but the bot - shows as "Skipped" in checks UI
+    timeout-minutes: 10
+    # Only successful CI runs on PRs that the app started (by opening the PR or pushing to it); others show as "Skipped".
     if: |
-      github.event.pull_request.draft == false &&
-      github.event.pull_request.user.login == 'bfd-automerge-test-bot[bot]' &&
-      (github.event.action != 'synchronize' || github.event.sender.login == 'bfd-automerge-test-bot[bot]')
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.actor.login == 'bfd-automerge-test-bot[bot]'
 
     # GITHUB_TOKEN is read-only here; approve and merge use AUTOMERGE_PAT.
     permissions:
@@ -24,15 +26,39 @@ jobs:
       pull-requests: read
 
     steps:
-      - name: Check files changed
+      - name: Check PR and files changed
         id: check-files
         uses: actions/github-script@v7
         with:
           script: |
+            const run = context.payload.workflow_run;
+            const number = run.pull_requests[0]?.number;
+            if (!number) {
+              core.notice('No pull request found for this CI run');
+              return false;
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: number
+            });
+
+            if (pr.state !== 'open' || pr.draft || pr.user.login !== 'bfd-automerge-test-bot[bot]') {
+              core.notice(`Skipping PR #${number}: state=${pr.state}, draft=${pr.draft}, author=${pr.user.login}`);
+              return false;
+            }
+
+            // A newer push has its own CI run, which will trigger this workflow again.
+            if (pr.head.sha !== run.head_sha) {
+              core.notice(`Skipping PR #${number}: CI ran on ${run.head_sha}, but the PR is now at ${pr.head.sha}`);
+              return false;
+            }
+
             const { data: files } = await github.rest.pulls.listFiles({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
+              pull_number: number,
               per_page: 100
             });
 
@@ -62,46 +88,26 @@ jobs:
               return false;
             }
 
+            core.setOutput('pr', number);
             core.info(`All ${files.length} files match allowed patterns`);
             return true;
 
-      # Required checks take a few seconds to register after the PR opens; --watch alone returns
-      # immediately if none are reported yet, so wait for them to appear first.
-      - name: Wait for required checks
-        id: wait-checks
+      - name: Approve PR
         if: steps.check-files.outputs.result == 'true'
         run: |
-          count=0
-          for _ in $(seq 1 20); do
-            count=$(gh pr checks "$PR" --repo "$REPO" --required --json name --jq 'length' 2>/dev/null || echo 0)
-            [[ "$count" -gt 0 ]] && break
-            sleep 15
-          done
-          if [[ "$count" -eq 0 ]]; then
-            echo "No required checks registered on this PR"
-            exit 1
-          fi
-          gh pr checks "$PR" --repo "$REPO" --required --watch --fail-fast --interval 30
+          gh pr review --approve "$PR" --repo "$REPO"
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
-          PR: ${{ github.event.pull_request.number }}
+          PR: ${{ steps.check-files.outputs.pr }}
           REPO: ${{ github.repository }}
 
-      - name: Approve PR
-        if: steps.check-files.outputs.result == 'true' && steps.wait-checks.outcome == 'success'
-        run: |
-          gh pr review --approve "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}"
-        env:
-          GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
-
-      # --match-head-commit refuses the merge if commits were pushed after this run started.
+      # --match-head-commit refuses the merge if commits were pushed after CI ran on this commit.
       - name: Merge PR
-        if: steps.check-files.outputs.result == 'true' && steps.wait-checks.outcome == 'success'
+        if: steps.check-files.outputs.result == 'true'
         run: |
           gh pr merge "$PR" --repo "$REPO" --squash --match-head-commit "$HEAD_SHA"
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_PAT }}
-          PR: ${{ github.event.pull_request.number }}
+          PR: ${{ steps.check-files.outputs.pr }}
           REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}

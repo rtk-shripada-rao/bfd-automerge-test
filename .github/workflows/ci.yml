@@ -3,6 +3,8 @@ name: CI
 on:
   pull_request:
     branches: [main, master]
+    # ready_for_review re-runs CI so auto-merge (triggered by CI completing) picks up drafts once they're ready.
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main, master]
 
