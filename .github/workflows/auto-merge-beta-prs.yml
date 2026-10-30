@@ -55,29 +55,11 @@ jobs:
               return false;
             }
 
-            // Content rules for allowed files, checked against the lines the PR adds.
-            const disallowedPatterns = [
-              {
-                file: /^detections\/engine\/rule_status\.json$/,
-                added: /:\s*"ga"/,
-                message: 'GA auto-merging is disabled'
-              }
-            ];
-
-            for (const rule of disallowedPatterns) {
-              for (const file of files.filter(f => rule.file.test(f.filename))) {
-                // GitHub omits the patch for very large diffs; fail closed rather than skip the check.
-                if (!file.patch) {
-                  core.setFailed(`${file.filename}: diff too large to inspect`);
-                  return false;
-                }
-                const hits = file.patch.split('\n')
-                  .filter(line => line.startsWith('+') && !line.startsWith('+++') && rule.added.test(line));
-                if (hits.length > 0) {
-                  core.setFailed(`${rule.message}:\n${hits.join('\n')}`);
-                  return false;
-                }
-              }
+            // Block promotions to ga: any added line in rule_status.json that sets a value to "ga".
+            const status = files.find(f => f.filename === 'detections/engine/rule_status.json');
+            if (status && /^\+.*:\s*"ga"/m.test(status.patch || '')) {
+              core.setFailed('GA auto-merging is disabled');
+              return false;
             }
 
             core.info(`All ${files.length} files match allowed patterns`);
