@@ -55,6 +55,13 @@ jobs:
               return false;
             }
 
+            // Block promotions to ga: any added line in rule_status.json that sets a value to "ga".
+            const status = files.find(f => f.filename === 'detections/engine/rule_status.json');
+            if (status && /^\+.*:\s*"ga"/m.test(status.patch || '')) {
+              core.setFailed('GA auto-merging is disabled');
+              return false;
+            }
+
             core.info(`All ${files.length} files match allowed patterns`);
             return true;
 
